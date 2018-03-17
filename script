@@ -1,0 +1,123 @@
+#!/bin/sh
+
+APP_NAME="ZeroTierOne"
+APP_DIR="/etc/$APP_NAME"
+
+FIREWALL_RULE_FILE="/etc/firewall.d/20-$APP_NAME"
+
+user_echo() { echo "<User-Echo>$@"; }
+
+install() {
+
+    mkdir -p $APP_DIR
+    cp ./$APP_NAME.conf $APP_DIR/$APP_NAME.conf
+
+    local arch
+    arch=$(opkg info libc| grep -F Architecture | awk '{print $2}')
+    case $arch in
+        mediatek|ralink|mtmips*)
+            opkg --add-arch 'mtmips_1004kc:20' install ./mips/libnatpmp*.ipk        
+            opkg --add-arch 'mtmips_1004kc:20' install ./mips/libminiupnpc*.ipk
+            opkg --add-arch 'mtmips_1004kc:20' install ./mips/zerotier*.ipk
+            ;;
+        ipq806x)
+            opkg install ./arm/libnatpmp*.ipk        
+            opkg install ./arm/libminiupnpc*.ipk
+            opkg install ./arm/zerotier*.ipk
+            ;;
+        *)
+            user_echo "Unsupported Architecture: $arch"
+            return 1
+            ;;
+    esac
+
+    gen_config
+
+    /etc/init.d/zerotier enable
+    
+    start    
+    return 0
+}
+
+uninstall() {
+
+    stop
+    /etc/init.d/zerotier enable
+    rm -rf $APP_DIR
+    opkg remove zerotier libminiupnpc libnatpmp
+    return 0
+}
+
+start() {
+
+    /etc/init.d/zerotier start;
+    read_configs
+    [ $MODE == 1 ] && /etc/init.d/firewall restart
+    return 0
+
+}
+
+stop() {
+
+    /etc/init.d/zerotier stop;
+    read_configs
+    [ $MODE == 1 ] && /etc/init.d/firewall restart
+    return 0
+}
+
+restart() {
+	stop
+	start
+	return 0
+}
+
+status() {
+    local stat
+    stat="unknown"
+    local pid=$(pgrep zerotier-one | wc -l)
+    if [ $pid == '1' ]; then
+        stat="running"
+    else
+        stat="stopped"
+    fi
+
+    echo "{ \"status\" : \"$stat\" }"
+    return 0
+}
+
+reconfigure() {
+    
+    cp ./$APP_NAME.conf $APP_DIR/$APP_NAME.conf
+    gen_config
+    return 0
+}
+
+read_configs() {
+
+    source "$APP_DIR/$APP_NAME.conf"
+    MODE=$MODE
+    ID=$ID
+}
+
+gen_config(){
+
+    read_configs
+    
+    #generate firewall files
+    if [ $MODE == 1 ]; then
+        cat >$FIREWALL_RULE_FILE<<EOF
+iface=zt0
+iptables -I FORWARD -i $iface -j ACCEPT
+iptables -I FORWARD -o $iface -j ACCEPT
+iptables -t nat -I POSTROUTING -o $iface -j MASQUERADE
+EOF
+    chmod +x $FIREWALL_RULE_FILE
+    fi
+
+    #set zerotier
+    uci -q set zerotier.sample_config.enabled='1'
+    uci -q del zerotier.sample_config.join
+    uci -q add_list zerotier.sample_config.join=$ID
+    uci -q commit zerotier
+
+}

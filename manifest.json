@@ -1,0 +1,29 @@
+{
+	"manifest_version": "2.0.0",
+	"supportgetappstatus": 1,
+	"requirements": {
+		"mode": "traditional",
+		"allow_uninstall": 1,
+		"visible": 1,
+		"support_refconfig": 1
+	},
+	"configuration": [
+  {
+		"name": "Network ID",
+		"type": "text",
+		"variable": "ID",
+		"defaultvalue": "",
+		"required": 1,
+		"description": "交出你的 ID"
+	},
+	{
+		"name": "局域网异地组网",
+		"type": "radio",
+		"variable": "MODE",
+		"choices": "是=1;否=0",
+		"defaultvalue": "1",
+		"required": 1,
+		"description": "需在 ZeroTier 官网配置路由表"
+	}
+]
+}
