@@ -1,7 +1,7 @@
 {
 	"manifest_version": "2.0.0",
 	"supportgetappstatus": 1,
-	"app_install_location" ：0,
+	"app_install_location":0,
 	"requirements": {
 		"mode": "traditional",
 		"allow_uninstall": 1,

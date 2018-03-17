@@ -45,6 +45,7 @@ uninstall() {
     /etc/init.d/zerotier enable
     rm -rf $APP_DIR
     opkg remove zerotier libminiupnpc libnatpmp
+    rm -f $FIREWALL_RULE_FILE
     return 0
 }
 
@@ -87,7 +88,7 @@ status() {
 
 reconfigure() {
     
-    cp ./$APP_NAME.conf $APP_DIR/$APP_NAME.conf
+    cp ./$APP_NAME.conf $APP_DIR/$APP_NAME.conf -f
     gen_config
     return 0
 }
@@ -107,12 +108,15 @@ gen_config(){
     if [ $MODE == 1 ]; then
         cat >$FIREWALL_RULE_FILE<<EOF
 iface=zt0
-iptables -I FORWARD -i $iface -j ACCEPT
-iptables -I FORWARD -o $iface -j ACCEPT
-iptables -t nat -I POSTROUTING -o $iface -j MASQUERADE
+iptables -I FORWARD -i \$iface -j ACCEPT
+iptables -I FORWARD -o \$iface -j ACCEPT
+iptables -t nat -I POSTROUTING -o \$iface -j MASQUERADE
 EOF
     chmod +x $FIREWALL_RULE_FILE
+    else
+        rm -f $FIREWALL_RULE_FILE
     fi
+    /etc/init.d/firewall restart
 
     #set zerotier
     uci -q set zerotier.sample_config.enabled='1'
