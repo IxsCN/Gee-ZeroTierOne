@@ -1,10 +1,10 @@
 NAME := ZeroTierOne
-VERSION := 0.0.1
+VERSION := 0.0.2
 
 app_tarball:= $(NAME)-$(VERSION).tgz
 
 all: clean 
-	tar --exclude-vcs --exclude Makefile -zcvf $(app_tarball) *
+	tar --exclude .git --exclude Makefile -zcvf $(app_tarball) *
 
 clean:
 	rm -f *.tgz
